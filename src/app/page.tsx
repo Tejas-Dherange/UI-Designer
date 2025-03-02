@@ -18,7 +18,7 @@ const App = () => {
                 Login
               </Link>
               <Link href="/dashboard">
-                <Button>Sign Up</Button>
+                <Button>Sign Up  </Button>
               </Link>
             </nav>
           </div>

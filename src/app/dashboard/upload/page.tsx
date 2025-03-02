@@ -2,7 +2,8 @@ import FileUploader from "@/components/FileUploader"
 
 function page() {
   return (
-    <FileUploader/>
+    //file uploader
+    <FileUploader/>   
   )
 }
 

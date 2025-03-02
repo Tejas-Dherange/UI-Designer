@@ -11,11 +11,11 @@ export default function RegisterPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  };   
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage("Submitting...");
+    setMessage("Submitting.....");
 
     const res = await fetch("/api/users/create-participation", {
       method: "POST",

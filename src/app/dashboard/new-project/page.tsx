@@ -104,8 +104,6 @@ export function UIDesigner({ projectId, initialContent }: UIDesignerProps) {
     setLoading(false)
   }
 
-  // Get AI suggestions using Gemini
-  // Get AI suggestions using Gemini
 const getAISuggestions = async () => {
   setLoading(true);
   try {
