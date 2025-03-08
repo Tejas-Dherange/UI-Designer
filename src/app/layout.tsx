@@ -23,9 +23,9 @@ export default function RootLayout({
       <html lang="en">
         <body className="min-h-screen h-screen flex flex-col ">
           {/* <SessionProvider> */}
-          {/* <ThemeProvider attribute="class" defaultTheme="system" enableSystem> */}
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             {children}
-          {/* </ThemeProvider> */}
+          </ThemeProvider>
           {/* </SessionProvider> */}
           <Toaster />
 

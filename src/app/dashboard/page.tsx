@@ -94,9 +94,9 @@ export function DashboardHeader() {
                     <span className="font-medium text-gray-900 dark:text-white">Type:</span>{" "}
                     {project.type || "General"}
                   </p>
-                  <Link href={`/dashboard/project/${project._id}`}>
+                  <Link href={`/dashboard/new-project?id=${project._id}`}>
                     <Button className="w-full bg-gray-800 hover:bg-gray-900 dark:bg-gray-600 dark:hover:bg-gray-500 text-white font-medium rounded-lg">
-                      Open Project
+                      Open Project 
                     </Button>
                   </Link>
                 </CardContent>

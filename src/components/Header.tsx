@@ -208,11 +208,7 @@ export const Header = () => {
         return;
       }
   
-      const type = prompt("Enter project type (e.g., Web, Mobile, UI Design, etc.):");
-      if (!type?.trim()) {
-        alert("❌ Project type is required!");
-        return;
-      }
+      
   
       // Loading indicator
       const saveBtn = document.querySelector("[data-save-btn]");

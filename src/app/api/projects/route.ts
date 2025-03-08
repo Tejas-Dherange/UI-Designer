@@ -43,12 +43,36 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await dbconnect(); // ✅ Connect to MongoDB
-    const projects = await Project.find().sort({ createdAt: -1 }); // ✅ Fetch all projects (latest first)
-
-    return NextResponse.json({ success: true, projects });
+    
+    // Extract ID from URL if present
+    const url = new URL(req.url);
+    const id = url.searchParams.get("id");
+    
+    if (id) {
+      // Fetch single project by ID
+      console.log("🔍 Fetching project by ID:", id);
+      const project = await Project.findById(id);
+      
+      if (!project) {
+        console.error("❌ Project not found with ID:", id);
+        return NextResponse.json(
+          { success: false, message: "Project not found" },
+          { status: 404 }
+        );
+      }
+      
+      console.log("✅ Project found:", project.name);
+      return NextResponse.json({ success: true, project });
+    } else {
+      // Fetch all projects (latest first)
+      console.log("🔍 Fetching all projects");
+      const projects = await Project.find().sort({ createdAt: -1 });
+      console.log(`✅ Found ${projects.length} projects`);
+      return NextResponse.json({ success: true, projects });
+    }
   } catch (error: any) {
     console.error("❌ Error fetching projects:", error);
     return NextResponse.json(
