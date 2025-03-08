@@ -1,43 +1,59 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { dbconnect } from "@/dbConfig/dfConfig"; // Ensure correct path
+import { Project } from "@/models/projectModel";
+import { NextRequest, NextResponse } from "next/server";
 
-// Mock database (replace with your actual database logic)
-let projectsDatabase: { [key: string]: any } = {};
+export async function POST(req: NextRequest) {
+  try {
+    console.log("📡 Connecting to MongoDB...");
+    await dbconnect();
+    console.log("✅ Connected to MongoDB");
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { method } = req;
+    const body = await req.json();
+    console.log("📥 Parsed Body:", body);
 
-  switch (method) {
-    case 'PUT':
-      // Handle saving project data
-      const { projectId, content } = req.body;
+    // ✅ Fix Validation (Remove "content" check)
+    if (!body.name || !body.userId || !Array.isArray(body.components)) {
+      console.error("❌ Validation Error: Missing required fields");
+      return NextResponse.json(
+        { success: false, message: "Missing required fields: name, userId, and components must be an array" },
+        { status: 400 }
+      );
+    }
 
-      if (!projectId || !content) {
-        return res.status(400).json({ message: 'Project ID and content are required.' });
-      }
+    // ✅ Save to Database
+    const newProject = new Project({
+      name: body.name,
+      userId: body.userId,
+      components: body.components,
+    });
 
-      // Save the project data (mock implementation)
-      projectsDatabase[projectId] = content;
+    await newProject.save();
+    console.log("✅ Project Saved Successfully!");
 
-      return res.status(200).json({ message: 'Project saved successfully.' });
+    return NextResponse.json({
+      success: true,
+      message: "Project saved successfully!",
+    });
+  } catch (error: any) {
+    console.error("❌ Error Saving Project:", error.message);
+    return NextResponse.json(
+      { success: false, message: `Server Error: ${error.message}` },
+      { status: 500 }
+    );
+  }
+}
 
-    case 'GET':
-      // Handle fetching project data
-      const { id } = req.query;
+export async function GET() {
+  try {
+    await dbconnect(); // ✅ Connect to MongoDB
+    const projects = await Project.find().sort({ createdAt: -1 }); // ✅ Fetch all projects (latest first)
 
-      if (!id || typeof id !== 'string') {
-        return res.status(400).json({ message: 'Project ID is required.' });
-      }
-
-      const project = projectsDatabase[id];
-
-      if (!project) {
-        return res.status(404).json({ message: 'Project not found.' });
-      }
-
-      return res.status(200).json({ project });
-
-    default:
-      res.setHeader('Allow', ['PUT', 'GET']);
-      return res.status(405).end(`Method ${method} Not Allowed`);
+    return NextResponse.json({ success: true, projects });
+  } catch (error: any) {
+    console.error("❌ Error fetching projects:", error);
+    return NextResponse.json(
+      { success: false, message: "Error fetching projects." },
+      { status: 500 }
+    );
   }
 }
