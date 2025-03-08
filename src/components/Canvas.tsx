@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Component, ComponentType } from '../types/component';
 import { useComponentStore } from '../store/componentStore';
 import { ComponentRenderer } from './ComponentRenderer';
@@ -11,6 +11,13 @@ export const Canvas: React.FC<CanvasProps> = ({ viewMode }) => {
   const { components, addComponent, selectComponent, selectedComponentId, updateComponent } = useComponentStore();
   const [draggingComponent, setDraggingComponent] = useState<string | null>(null);
   const [offset, setOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [currentTheme, setCurrentTheme] = useState<string>('default');
+
+  // Effect to load current theme from localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('canvasTheme') || 'default';
+    setCurrentTheme(savedTheme);
+  }, []);
 
   // Canvas width based on selected view mode
   const getCanvasWidth = () => {
@@ -35,6 +42,7 @@ export const Canvas: React.FC<CanvasProps> = ({ viewMode }) => {
     const newComponent = {
       id: Math.random().toString(36).substr(2, 9),
       type: componentType as ComponentType,
+      isVisible: true, // Ensure new components are visible by default
       props: {
         style: {
           position: 'absolute',
@@ -94,8 +102,7 @@ export const Canvas: React.FC<CanvasProps> = ({ viewMode }) => {
 
   return (
     <div
-   
-      className={`bg-white border border-gray-300 shadow-sm h-[calc(100vh-12rem)] ${getCanvasWidth()} relative overflow-y-auto overflow-x-hidden`}
+      className={`canvas-container bg-white border border-gray-300 shadow-sm h-[calc(100vh-12rem)] ${getCanvasWidth()} relative overflow-y-auto overflow-x-hidden theme-${currentTheme}`}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onMouseMove={handleMouseMove}
@@ -111,20 +118,22 @@ export const Canvas: React.FC<CanvasProps> = ({ viewMode }) => {
       )}
 
       {components.map((component: Component) => (
-        <div 
-          key={component.id}
-          onMouseDown={(e) => handleMouseDown(e, component.id)}
-          className={`absolute cursor-pointer ${selectedComponentId === component.id ? 'outline outline-2 outline-blue-500' : ''}`}
-          style={{
-            left: component.props.style?.left || '0%',
-            top: component.props.style?.top || '0%',
-            width: component.props.style?.width || 'auto',
-            height: component.props.style?.height || 'auto',
-            zIndex: selectedComponentId === component.id ? 10 : 1,
-          }}
-        >
-          <ComponentRenderer component={component} />
-        </div>
+        (!component.hasOwnProperty('isVisible') || component.isVisible) && ( // Only render if isVisible is not defined or true
+          <div 
+            key={component.id}
+            onMouseDown={(e) => handleMouseDown(e, component.id)}
+            className={`absolute cursor-pointer ${selectedComponentId === component.id ? 'outline outline-2 outline-blue-500' : ''}`}
+            style={{
+              left: component.props.style?.left || '0%',
+              top: component.props.style?.top || '0%',
+              width: component.props.style?.width || 'auto',
+              height: component.props.style?.height || 'auto',
+              zIndex: selectedComponentId === component.id ? 10 : 1,
+            }}
+          >
+            <ComponentRenderer component={component} />
+          </div>
+        )
       ))}
     </div>
   );

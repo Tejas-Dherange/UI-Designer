@@ -44,7 +44,7 @@ export function DashboardHeader() {
           {/* 🔹 Left: Logo */}
           <Link href="/dashboard" className="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-gray-100">
             <Layers className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-            <span>UI Designer</span>
+            <span>UI Maker Pro</span>
           </Link>
 
           {/* 🔹 Right: Actions */}

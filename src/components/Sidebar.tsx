@@ -1,10 +1,20 @@
 import React from "react";
 import { useComponentStore } from "../store/componentStore";
-import { Trash2, Eye, Copy, ArrowUp, ArrowDown } from "lucide-react";
+import { Trash2, Eye, EyeOff, Copy, ArrowUp, ArrowDown } from "lucide-react";
 
 export const Sidebar: React.FC = () => {
-  const { components, selectComponent, selectedComponentId, deleteComponent, deleteTemplate, deleteAllComponents } =
-    useComponentStore();
+  const {
+    components,
+    selectComponent,
+    selectedComponentId,
+    deleteComponent,
+    deleteTemplate,
+    deleteAllComponents,
+    toggleVisibility,
+    undo,
+    redo,
+    duplicateComponent,
+  } = useComponentStore();
 
   // Group components by template
   const groupedComponents = components.reduce((acc, component) => {
@@ -47,7 +57,7 @@ export const Sidebar: React.FC = () => {
                       selectedComponentId === component.id
                         ? "bg-blue-50 border-l-2 border-blue-500"
                         : "hover:bg-gray-100"
-                    }`}
+                    } ${component.isVisible === false ? 'opacity-50' : ''}`}
                     onClick={() => selectComponent(component.id)}
                   >
                     <div className="flex items-center">
@@ -62,16 +72,44 @@ export const Sidebar: React.FC = () => {
 
                     {/* 🛠️ Action Buttons */}
                     <div className="flex space-x-1">
-                      <button className="p-1 text-gray-400 hover:text-gray-700 rounded" title="Toggle visibility">
-                        <Eye size={14} />
+                      <button 
+                        className="p-1 rounded text-gray-400 hover:text-gray-700"
+                        title="Toggle visibility"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleVisibility(component.id);
+                        }}
+                      >
+                        {component.isVisible === false ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
-                      <button className="p-1 text-gray-400 hover:text-gray-700 rounded" title="Duplicate">
+                      <button 
+                        className="p-1 text-gray-400 hover:text-gray-700 rounded" 
+                        title="Duplicate"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          duplicateComponent(component.id);
+                        }}
+                      >
                         <Copy size={14} />
                       </button>
-                      <button className="p-1 text-gray-400 hover:text-gray-700 rounded" title="Move up">
+                      <button 
+                        className="p-1 text-gray-400 hover:text-gray-700 rounded" 
+                        title="Move up"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          undo();
+                        }}
+                      >
                         <ArrowUp size={14} />
                       </button>
-                      <button className="p-1 text-gray-400 hover:text-gray-700 rounded" title="Move down">
+                      <button 
+                        className="p-1 text-gray-400 hover:text-gray-700 rounded" 
+                        title="Move down"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          redo();
+                        }}
+                      >
                         <ArrowDown size={14} />
                       </button>
                       <button

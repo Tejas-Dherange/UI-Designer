@@ -155,21 +155,25 @@ export const AIAssistant: React.FC = () => {
       if (!extractedJSON || !Array.isArray(extractedJSON)) throw new Error("Invalid AI response format.");
 
       // Make sure all components have a valid structure with string children
-      const validComponents = extractedJSON.map(comp => ({
-        ...comp,
-        id: comp.id || uuidv4(),
-        type: comp.type || 'div',
-        props: {
-          ...comp.props,
-          style: {
-            ...(comp.props?.style || {}),
-            left: comp.props?.style?.left || '0px',
-            top: comp.props?.style?.top || '0px'
-          },
-          // Ensure children is a string or valid JSX element
-          children: typeof comp.props?.children === 'string' ? comp.props.children : 'Component'
-        }
-      }));
+      const validComponents = extractedJSON.map(comp => {
+        const existingComponent = components.find(c => c.id === comp.id);
+        return {
+          ...comp,
+          id: comp.id || uuidv4(),
+          type: comp.type || 'div',
+          isVisible: existingComponent?.isVisible ?? true, // ✅ Preserve visibility
+          props: {
+            ...comp.props,
+            style: {
+              ...(comp.props?.style || {}),
+              left: comp.props?.style?.left || '0px',
+              top: comp.props?.style?.top || '0px'
+            },
+            // Ensure children is a string or valid JSX element
+            children: typeof comp.props?.children === 'string' ? comp.props.children : 'Component'
+          }
+        };
+      });
 
       setPreviewComponents(validComponents);
       setShowPreview(true);
@@ -188,21 +192,25 @@ export const AIAssistant: React.FC = () => {
       if (!extractedJSON || !Array.isArray(extractedJSON)) throw new Error("Invalid AI response format.");
 
       // Make sure all components have a valid structure with string children
-      const validComponents = extractedJSON.map(comp => ({
-        ...comp,
-        id: comp.id || uuidv4(),
-        type: comp.type || 'div',
-        props: {
-          ...comp.props,
-          style: {
-            ...(comp.props?.style || {}),
-            left: comp.props?.style?.left || '0px',
-            top: comp.props?.style?.top || '0px'
-          },
-          // Ensure children is a string or valid JSX element
-          children: typeof comp.props?.children === 'string' ? comp.props.children : 'Component'
-        }
-      }));
+      const validComponents = extractedJSON.map(comp => {
+        const existingComponent = components.find(c => c.id === comp.id);
+        return {
+          ...comp,
+          id: comp.id || uuidv4(),
+          type: comp.type || 'div',
+          isVisible: existingComponent?.isVisible ?? true, // ✅ Preserve visibility
+          props: {
+            ...comp.props,
+            style: {
+              ...(comp.props?.style || {}),
+              left: comp.props?.style?.left || '0px',
+              top: comp.props?.style?.top || '0px'
+            },
+            // Ensure children is a string or valid JSX element
+            children: typeof comp.props?.children === 'string' ? comp.props.children : 'Component'
+          }
+        };
+      });
 
       // Save current components for undo functionality
       setPrevComponents([...components]);
@@ -234,7 +242,7 @@ export const AIAssistant: React.FC = () => {
     }
   };
 
-  // ✅ Generate New Component from AI - FIXED
+  // ✅ Generate New Component from AI
   const handleGenerateComponent = async () => {
     if (!componentName.trim()) {
       setError("Please enter a component name.");
@@ -421,88 +429,87 @@ export const AIAssistant: React.FC = () => {
   };
 
   // Generate summary of changes
- // Generate summary of changes
-const generateChangeSummary = () => {
-  if (!previewComponents.length || !components.length) return null;
-  
-  // Map of changes by component ID
-  const changes: Record<string, string[]> = {};
-  
-  // Compare each component
-  previewComponents.forEach(newComp => {
-    const originalComp = components.find(c => c.id === newComp.id);
-    if (!originalComp) {
-      // This is a new component
-      changes[newComp.id] = ["New component added"];
-      return;
-    }
+  const generateChangeSummary = () => {
+    if (!previewComponents.length || !components.length) return null;
     
-    const changeList: string[] = [];
+    // Map of changes by component ID
+    const changes: Record<string, string[]> = {};
     
-    // Compare style properties
-    const newStyle = newComp.props?.style || {};
-    const oldStyle = originalComp.props?.style || {};
-    
-    // Get all keys from both objects to catch additions and removals
-    const allStyleKeys = [...new Set([...Object.keys(newStyle), ...Object.keys(oldStyle)])];
-    
-    allStyleKeys.forEach(key => {
-      // Convert values to strings for safer comparison and handling of undefined
-      const oldVal = String(oldStyle[key] || '');
-      const newVal = String(newStyle[key] || '');
+    // Compare each component
+    previewComponents.forEach(newComp => {
+      const originalComp = components.find(c => c.id === newComp.id);
+      if (!originalComp) {
+        // This is a new component
+        changes[newComp.id] = ["New component added"];
+        return;
+      }
       
-      if (oldVal !== newVal) {
-        // Format values nicely
-        const oldFormatted = oldVal || 'none';
-        const newFormatted = newVal || 'none';
-        changeList.push(`${key}: ${oldFormatted} → ${newFormatted}`);
+      const changeList: string[] = [];
+      
+      // Compare style properties
+      const newStyle = newComp.props?.style || {};
+      const oldStyle = originalComp.props?.style || {};
+      
+      // Get all keys from both objects to catch additions and removals
+      const allStyleKeys = [...new Set([...Object.keys(newStyle), ...Object.keys(oldStyle)])];
+      
+      allStyleKeys.forEach(key => {
+        // Convert values to strings for safer comparison and handling of undefined
+        const oldVal = String(oldStyle[key] || '');
+        const newVal = String(newStyle[key] || '');
+        
+        if (oldVal !== newVal) {
+          // Format values nicely
+          const oldFormatted = oldVal || 'none';
+          const newFormatted = newVal || 'none';
+          changeList.push(`${key}: ${oldFormatted} → ${newFormatted}`);
+        }
+      });
+      
+      // Compare children (text content)
+      const oldChildren = String(originalComp.props?.children || '');
+      const newChildren = String(newComp.props?.children || '');
+      
+      if (oldChildren !== newChildren) {
+        changeList.push(`text: "${oldChildren}" → "${newChildren}"`);
+      }
+      
+      // Compare other props
+      const oldProps = { ...originalComp.props };
+      const newProps = { ...newComp.props };
+      
+      // Remove style and children as we've already compared them
+      delete oldProps.style;
+      delete oldProps.children;
+      delete newProps.style;
+      delete newProps.children;
+      
+      // Compare remaining props
+      const allPropKeys = [...new Set([...Object.keys(oldProps), ...Object.keys(newProps)])];
+      
+      allPropKeys.forEach(key => {
+        // Simple comparison - might need to be enhanced for complex objects
+        if (JSON.stringify(oldProps[key]) !== JSON.stringify(newProps[key])) {
+          changeList.push(`${key} property changed`);
+        }
+      });
+      
+      // Only add to changes if we found differences
+      if (changeList.length > 0) {
+        changes[newComp.id] = changeList;
       }
     });
     
-    // Compare children (text content)
-    const oldChildren = String(originalComp.props?.children || '');
-    const newChildren = String(newComp.props?.children || '');
-    
-    if (oldChildren !== newChildren) {
-      changeList.push(`text: "${oldChildren}" → "${newChildren}"`);
-    }
-    
-    // Compare other props
-    const oldProps = { ...originalComp.props };
-    const newProps = { ...newComp.props };
-    
-    // Remove style and children as we've already compared them
-    delete oldProps.style;
-    delete oldProps.children;
-    delete newProps.style;
-    delete newProps.children;
-    
-    // Compare remaining props
-    const allPropKeys = [...new Set([...Object.keys(oldProps), ...Object.keys(newProps)])];
-    
-    allPropKeys.forEach(key => {
-      // Simple comparison - might need to be enhanced for complex objects
-      if (JSON.stringify(oldProps[key]) !== JSON.stringify(newProps[key])) {
-        changeList.push(`${key} property changed`);
+    // Check for removed components
+    components.forEach(oldComp => {
+      const stillExists = previewComponents.some(c => c.id === oldComp.id);
+      if (!stillExists) {
+        changes[oldComp.id] = [`Component "${oldComp.props?.children || 'Unnamed'}" removed`];
       }
     });
     
-    // Only add to changes if we found differences
-    if (changeList.length > 0) {
-      changes[newComp.id] = changeList;
-    }
-  });
-  
-  // Check for removed components
-  components.forEach(oldComp => {
-    const stillExists = previewComponents.some(c => c.id === oldComp.id);
-    if (!stillExists) {
-      changes[oldComp.id] = [`Component "${oldComp.props?.children || 'Unnamed'}" removed`];
-    }
-  });
-  
-  return changes;
-};
+    return changes;
+  };
 
   // Get change summary for display
   const changeSummary = showPreview ? generateChangeSummary() : null;

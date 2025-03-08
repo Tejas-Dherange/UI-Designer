@@ -7,8 +7,8 @@ import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 
 export const metadata: Metadata = {
-  title: "CircleU",
-  description: "Circle U is a social media platform for students.",
+  title: "Ui Maker Pro",
+  description: "Generate UI components with ease!",
 
 };
 
@@ -23,9 +23,9 @@ export default function RootLayout({
       <html lang="en">
         <body className="min-h-screen h-screen flex flex-col ">
           {/* <SessionProvider> */}
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {/* <ThemeProvider attribute="class" defaultTheme="system" enableSystem> */}
             {children}
-          </ThemeProvider>
+          {/* </ThemeProvider> */}
           {/* </SessionProvider> */}
           <Toaster />
 

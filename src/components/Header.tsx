@@ -208,7 +208,11 @@ export const Header = () => {
         return;
       }
   
-      
+      const type = prompt("Enter project type (e.g., Web, Mobile, UI Design, etc.):");
+      if (!type?.trim()) {
+        alert("❌ Project type is required!");
+        return;
+      }
   
       // Loading indicator
       const saveBtn = document.querySelector("[data-save-btn]");
@@ -270,7 +274,7 @@ export const Header = () => {
   return (
     <>
       <header className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between">
-        <div className="text-blue-600 font-bold text-xl">UI Designer</div>
+        <div className="text-blue-600 font-bold text-xl">Ui Maker Pro</div>
 
         <div className="flex items-center space-x-2">
           <button 
@@ -287,10 +291,10 @@ export const Header = () => {
             Save
           </button>
           <button 
-            onClick={generateCodeWithAI} 
+            // onClick={generateCodeWithAI} 
             className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm flex items-center">
             <Code size={16} className="mr-1" />
-            Generate Code
+            Collaborate
           </button>
           <button 
             onClick={() => setIsSharePopupOpen(true)} 
