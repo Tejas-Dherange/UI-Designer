@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useComponentStore } from '../store/componentStore';
-import { Wand2, RefreshCw, XCircle, Undo2, Check, Plus } from 'lucide-react';
+import { Wand2, RefreshCw, XCircle, Undo2, Check, Plus, Eye } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -13,8 +13,11 @@ export const AIAssistant: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { components, setComponents, selectComponent } = useComponentStore();
   const [prevComponents, setPrevComponents] = useState<any[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewComponents, setPreviewComponents] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'analyze' | 'generate'>('analyze');
   const [componentName, setComponentName] = useState('');
+  const [hasAppliedChanges, setHasAppliedChanges] = useState(false);
 
   // Improved JSON extraction function with better error handling
   const extractValidJSON = (text: string) => {
@@ -42,6 +45,12 @@ export const AIAssistant: React.FC = () => {
     }
   };
 
+  // Reset preview when tab changes
+  useEffect(() => {
+    setShowPreview(false);
+    setPreviewComponents([]);
+  }, [activeTab]);
+
   // ✅ Analyze Canvas Function
   const handleAnalyzeCanvas = async () => {
     if (!components.length) {
@@ -52,6 +61,9 @@ export const AIAssistant: React.FC = () => {
     setIsGenerating(true);
     setError(null);
     setGeneratedText('');
+    setShowPreview(false);
+    setPreviewComponents([]);
+    setHasAppliedChanges(false);
 
     try {
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
@@ -79,6 +91,8 @@ export const AIAssistant: React.FC = () => {
         - **Return ONLY a valid JSON array** of updated components.
         - **DO NOT include explanations, comments, or additional text.**
         - **Ensure that every component has a valid "id", "type", and "props" with a "style" object.**
+        - **IMPORTANT: Maintain the original component positions but optimize spacing between them.**
+        - **Preserve the original component IDs to ensure proper tracking.**
         
         ### Example JSON Output:
         \`\`\`json
@@ -132,6 +146,39 @@ export const AIAssistant: React.FC = () => {
     setIsGenerating(false);
   };
 
+  // Preview changes before applying them
+  const handlePreviewChanges = () => {
+    if (!generatedText.trim()) return;
+
+    try {
+      const extractedJSON = extractValidJSON(generatedText);
+      if (!extractedJSON || !Array.isArray(extractedJSON)) throw new Error("Invalid AI response format.");
+
+      // Make sure all components have a valid structure with string children
+      const validComponents = extractedJSON.map(comp => ({
+        ...comp,
+        id: comp.id || uuidv4(),
+        type: comp.type || 'div',
+        props: {
+          ...comp.props,
+          style: {
+            ...(comp.props?.style || {}),
+            left: comp.props?.style?.left || '0px',
+            top: comp.props?.style?.top || '0px'
+          },
+          // Ensure children is a string or valid JSX element
+          children: typeof comp.props?.children === 'string' ? comp.props.children : 'Component'
+        }
+      }));
+
+      setPreviewComponents(validComponents);
+      setShowPreview(true);
+    } catch (err) {
+      setError("AI response is not in valid JSON format.");
+      console.error("❌ Error previewing changes:", err);
+    }
+  };
+
   // ✅ Apply AI Optimized Components to Canvas
   const handleApplyAnalyzedChanges = () => {
     if (!generatedText.trim()) return;
@@ -157,14 +204,33 @@ export const AIAssistant: React.FC = () => {
         }
       }));
 
+      // Save current components for undo functionality
       setPrevComponents([...components]);
       setComponents(validComponents);
+      setHasAppliedChanges(true);
+      
       if (validComponents.length > 0) {
         selectComponent(validComponents[0].id);
       }
+      
+      // Clear preview
+      setShowPreview(false);
     } catch (err) {
       setError("AI response is not in valid JSON format.");
       console.error("❌ Error applying analyzed changes:", err);
+    }
+  };
+
+  // ✅ Undo changes function
+  const handleUndoChanges = () => {
+    if (prevComponents.length > 0) {
+      setComponents([...prevComponents]);
+      setPrevComponents([]);
+      setHasAppliedChanges(false);
+      
+      if (prevComponents.length > 0) {
+        selectComponent(prevComponents[0].id);
+      }
     }
   };
 
@@ -206,6 +272,8 @@ export const AIAssistant: React.FC = () => {
       "style": {
         "width": "clamp(200px, 100%, 400px)",  
         "height": "auto",
+        "left": "100px",
+        "top": "100px",
         "padding": "16px",
         "borderRadius": "8px",
         "boxShadow": "0px 4px 8px rgba(0, 0, 0, 0.1)",
@@ -233,7 +301,6 @@ export const AIAssistant: React.FC = () => {
 
   🔹 **Begin now.**
 `;
-
 
       const result = await model.generateContent(generatePrompt);
       const response = await result.response;
@@ -353,6 +420,93 @@ export const AIAssistant: React.FC = () => {
     }
   };
 
+  // Generate summary of changes
+ // Generate summary of changes
+const generateChangeSummary = () => {
+  if (!previewComponents.length || !components.length) return null;
+  
+  // Map of changes by component ID
+  const changes: Record<string, string[]> = {};
+  
+  // Compare each component
+  previewComponents.forEach(newComp => {
+    const originalComp = components.find(c => c.id === newComp.id);
+    if (!originalComp) {
+      // This is a new component
+      changes[newComp.id] = ["New component added"];
+      return;
+    }
+    
+    const changeList: string[] = [];
+    
+    // Compare style properties
+    const newStyle = newComp.props?.style || {};
+    const oldStyle = originalComp.props?.style || {};
+    
+    // Get all keys from both objects to catch additions and removals
+    const allStyleKeys = [...new Set([...Object.keys(newStyle), ...Object.keys(oldStyle)])];
+    
+    allStyleKeys.forEach(key => {
+      // Convert values to strings for safer comparison and handling of undefined
+      const oldVal = String(oldStyle[key] || '');
+      const newVal = String(newStyle[key] || '');
+      
+      if (oldVal !== newVal) {
+        // Format values nicely
+        const oldFormatted = oldVal || 'none';
+        const newFormatted = newVal || 'none';
+        changeList.push(`${key}: ${oldFormatted} → ${newFormatted}`);
+      }
+    });
+    
+    // Compare children (text content)
+    const oldChildren = String(originalComp.props?.children || '');
+    const newChildren = String(newComp.props?.children || '');
+    
+    if (oldChildren !== newChildren) {
+      changeList.push(`text: "${oldChildren}" → "${newChildren}"`);
+    }
+    
+    // Compare other props
+    const oldProps = { ...originalComp.props };
+    const newProps = { ...newComp.props };
+    
+    // Remove style and children as we've already compared them
+    delete oldProps.style;
+    delete oldProps.children;
+    delete newProps.style;
+    delete newProps.children;
+    
+    // Compare remaining props
+    const allPropKeys = [...new Set([...Object.keys(oldProps), ...Object.keys(newProps)])];
+    
+    allPropKeys.forEach(key => {
+      // Simple comparison - might need to be enhanced for complex objects
+      if (JSON.stringify(oldProps[key]) !== JSON.stringify(newProps[key])) {
+        changeList.push(`${key} property changed`);
+      }
+    });
+    
+    // Only add to changes if we found differences
+    if (changeList.length > 0) {
+      changes[newComp.id] = changeList;
+    }
+  });
+  
+  // Check for removed components
+  components.forEach(oldComp => {
+    const stillExists = previewComponents.some(c => c.id === oldComp.id);
+    if (!stillExists) {
+      changes[oldComp.id] = [`Component "${oldComp.props?.children || 'Unnamed'}" removed`];
+    }
+  });
+  
+  return changes;
+};
+
+  // Get change summary for display
+  const changeSummary = showPreview ? generateChangeSummary() : null;
+
   return (
     <div className="space-y-4">
       {/* ✅ Tab Navigation */}
@@ -384,9 +538,64 @@ export const AIAssistant: React.FC = () => {
               'Analyze Canvas'
             )}
           </button>
-          {generatedText && (
-            <button className="w-full bg-green-600 text-white py-2 rounded-md flex items-center justify-center" onClick={handleApplyAnalyzedChanges}>
-              <Check size={14} className="mr-2" /> Apply Analyzed Changes
+          
+          {generatedText && !showPreview && (
+            <button 
+              className="w-full bg-indigo-600 text-white py-2 rounded-md flex items-center justify-center" 
+              onClick={handlePreviewChanges}
+            >
+              <Eye size={14} className="mr-2" /> Preview Changes
+            </button>
+          )}
+          
+          {showPreview && (
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-100 rounded-md border border-gray-300">
+                <h3 className="font-medium text-gray-800 mb-2">Changes Summary:</h3>
+                {changeSummary && Object.keys(changeSummary).length > 0 ? (
+                  <div className="space-y-2">
+                    {Object.entries(changeSummary).map(([id, changes]) => {
+                      const component = components.find(c => c.id === id);
+                      return (
+                        <div key={id} className="p-2 bg-white rounded border border-gray-200">
+                          <p className="font-medium">{component?.props?.children || `Component ${id}`}:</p>
+                          <ul className="ml-4 list-disc">
+                            {changes.map((change, idx) => (
+                              <li key={idx} className="text-sm text-gray-700">{change}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No significant changes detected.</p>
+                )}
+              </div>
+              
+              <div className="flex space-x-2">
+                <button 
+                  className="flex-1 bg-green-600 text-white py-2 rounded-md flex items-center justify-center" 
+                  onClick={handleApplyAnalyzedChanges}
+                >
+                  <Check size={14} className="mr-2" /> Apply Changes
+                </button>
+                <button 
+                  className="flex-1 bg-gray-500 text-white py-2 rounded-md flex items-center justify-center" 
+                  onClick={() => setShowPreview(false)}
+                >
+                  <XCircle size={14} className="mr-2" /> Cancel
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {hasAppliedChanges && (
+            <button 
+              className="w-full bg-amber-600 text-white py-2 rounded-md flex items-center justify-center" 
+              onClick={handleUndoChanges}
+            >
+              <Undo2 size={14} className="mr-2" /> Undo Changes
             </button>
           )}
         </>
